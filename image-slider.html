@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple image slider · responsive + autoplay</title>
+  <style>
+    /* ----- CSS STYLES: slider container, images, navigation, responsiveness ----- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #f0f4fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+    }
+
+    /* main slider container — responsive max-width, centered */
+    .slider {
+      position: relative;
+      width: 100%;
+      max-width: 900px;         /* limits width on large screens */
+      margin: 2rem 1.5rem;
+      border-radius: 20px;
+      overflow: hidden;         /* hides overflowing images */
+      box-shadow: 0 20px 30px -10px rgba(0, 20, 30, 0.3);
+      background: #1e2b37;
+    }
+
+    /* wrapper that holds all images as a flexible row */
+    .slider-wrapper {
+      display: flex;
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      will-change: transform;
+    }
+
+    /* each image fills the full width of the container, maintains aspect */
+    .slider-wrapper img {
+      width: 100%;
+      flex-shrink: 0;           /* prevents images from shrinking */
+      object-fit: cover;        /* covers area nicely, no distortion */
+      display: block;
+      height: auto;             /* natural height, but we can set a preferred min-height */
+      /* optional fixed aspect for consistent look (16:9 feel) */
+      aspect-ratio: 16 / 9;
+      background: #cbd5e0;      /* fallback while loading */
+    }
+
+    /* ----- navigation buttons (previous / next) ----- */
+    .slider-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(4px);
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 32px;
+      font-weight: 500;
+      color: #1e2b37;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+      z-index: 10;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .slider-btn:hover {
+      background: white;
+      transform: translateY(-50%) scale(1.05);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+    }
+
+    .slider-btn:active {
+      transform: translateY(-50%) scale(0.98);
+    }
+
+    .prev-btn {
+      left: 16px;
+    }
+
+    .next-btn {
+      right: 16px;
+    }
+
+    /* optional small indicator for current slide (simple dots) */
+    .slider-dots {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 14px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(2px);
+      padding: 8px 18px;
+      border-radius: 40px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .dot.active {
+      background: white;
+      transform: scale(1.2);
+      box-shadow: 0 0 10px #fff8;
+    }
+
+    /* autoplay status indicator (optional) — small pause/play hint */
+    .autoplay-hint {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      color: white;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 40px;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(255,255,255,0.2);
+      z-index: 15;
+      pointer-events: none;  /* clicks pass through */
+    }
+
+    /* hover pause effect: the slider pauses autoplay when mouse enters */
+    .slider:hover ~ .autoplay-hint {
+      opacity: 0.7;
+    }
+
+    /* responsive adjustments: smaller buttons on narrow screens */
+    @media (max-width: 600px) {
+      .slider-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 26px;
+      }
+      .prev-btn {
+        left: 8px;
+      }
+      .next-btn {
+        right: 8px;
+      }
+      .slider-dots {
+        bottom: 12px;
+        padding: 6px 14px;
+        gap: 10px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+      }
+    }
+
+    /* ensure images don't overflow on very small devices */
+    @media (max-width: 400px) {
+      .slider {
+        margin: 1rem 0.5rem;
+        border-radius: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HTML STRUCTURE: slider container, wrapper with images, navigation buttons, dots, autoplay hint -->
+  <div class="slider" id="slider">
+    <div class="slider-wrapper" id="sliderWrapper">
+      <!-- using free high-quality placeholder images from Picsum (each with different scenery) -->
+      <img src="https://picsum.photos/id/1015/900/506" alt="Mountain landscape" loading="lazy">
+      <img src="https://picsum.photos/id/1043/900/506" alt="Waterfall" loading="lazy">
+      <img src="https://picsum.photos/id/106/900/506" alt="Flower field" loading="lazy">
+      <img src="https://picsum.photos/id/20/900/506" alt="Coastal rocks" loading="lazy">
+      <img src="https://picsum.photos/id/25/900/506" alt="City lights" loading="lazy">
+    </div>
+
+    <!-- navigation controls (previous / next) -->
+    <button class="slider-btn prev-btn" id="prevBtn" aria-label="Previous image">❮</button>
+    <button class="slider-btn next-btn" id="nextBtn" aria-label="Next image">❯</button>
+
+    <!-- optional dots indicator (show current slide) -->
+    <div class="slider-dots" id="sliderDots">
+      <!-- dynamically filled by javascript -->
+    </div>
+
+    <!-- small visual hint for autoplay (optional) -->
+    <div class="autoplay-hint" id="autoplayHint">▶ autoplay</div>
+  </div>
+
+  <!-- JavaScript: slider logic, navigation, autoplay, responsiveness, dot sync -->
+  <script>
+    (function() {
+      // ----- DOM elements -----
+      const slider = document.getElementById('slider');
+      const wrapper = document.getElementById('sliderWrapper');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const dotsContainer = document.getElementById('sliderDots');
+      const autoplayHint = document.getElementById('autoplayHint');
+
+      // Get all images inside wrapper
+      const images = wrapper.querySelectorAll('img');
+      const totalSlides = images.length;
+
+      if (totalSlides === 0) return; // guard
+
+      // state variables
+      let currentIndex = 0;               // zero-based slide index
+      let autoplayInterval = null;
+      let isAutoplayActive = true;        // start with autoplay on
+      const AUTOPLAY_DELAY = 3000;         // 3 seconds
+
+      // ----- create dots dynamically -----
+      function createDots() {
+        dotsContainer.innerHTML = '';      // clear any existing
+        for (let i = 0; i < totalSlides; i++) {
+          const dot = document.createElement('span');
+          dot.classList.add('dot');
+          if (i === currentIndex) dot.classList.add('active');
+          dot.dataset.index = i;
+          dot.setAttribute('aria-label', `Go to slide ${i+1}`);
+          dot.addEventListener('click', function(e) {
+            const idx = parseInt(e.target.dataset.index, 10);
+            if (!isNaN(idx) && idx !== currentIndex) {
+              goToSlide(idx);
+              resetAutoplay();              // restart timer after manual click
+            }
+          });
+          dotsContainer.appendChild(dot);
+        }
+      }
+
+      // ----- update transform and active dot -----
+      function goToSlide(index) {
+        if (index < 0) index = totalSlides - 1;
+        if (index >= totalSlides) index = 0;
+        currentIndex = index;
+
+        // apply translateX: each slide is 100% width
+        wrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+        // update dot active state
+        const dots = dotsContainer.querySelectorAll('.dot');
+        dots.forEach((dot, i) => {
+          if (i === currentIndex) dot.classList.add('active');
+          else dot.classList.remove('active');
+        });
+
+        // update hint text (just for fun)
+        updateHintStatus();
+      }
+
+      // helper for next/prev
+      function nextSlide() {
+        goToSlide(currentIndex + 1);
+      }
+
+      function prevSlide() {
+        goToSlide(currentIndex - 1);
+      }
+
+      // ----- autoplay functions -----
+      function startAutoplay() {
+        if (autoplayInterval) clearInterval(autoplayInterval);
+        autoplayInterval = setInterval(() => {
+          nextSlide();
+        }, AUTOPLAY_DELAY);
+        isAutoplayActive = true;
+        updateHintStatus();
+      }
+
+      function stopAutoplay() {
+        if (autoplayInterval) {
+          clearInterval(autoplayInterval);
+          autoplayInterval = null;
+        }
+        isAutoplayActive = false;
+        updateHintStatus();
+      }
+
+      function resetAutoplay() {
+        // stop current and start again (to delay next auto transition)
+        if (isAutoplayActive) {
+          stopAutoplay();
+          startAutoplay();
+        }
+      }
+
+      // update the small hint and toggle symbol
+      function updateHintStatus() {
+        if (isAutoplayActive) {
+          autoplayHint.innerHTML = '⏵ autoplay · interval 3s';
+        } else {
+          autoplayHint.innerHTML = '⏸︎ autoplay paused';
+        }
+      }
+
+      // ----- pause on hover, resume on leave (only if autoplay active) -----
+      slider.addEventListener('mouseenter', () => {
+        if (isAutoplayActive) {
+          stopAutoplay();           // pause while hovering
+        }
+      });
+
+      slider.addEventListener('mouseleave', () => {
+        // we only restart if the global autoplay flag is true (user hasn't disabled permanently)
+        // but we want to resume automatically. However, if user never paused, we keep running.
+        // We'll always restart because we set isAutoplayActive to true at start.
+        // But if user clicks pause (optional toggle not present) we might keep it.
+        // For simplicity: on mouseleave, if we were originally autoplaying (isAutoplayActive === true) then restart.
+        // However we stopped autoplay on enter, so isAutoplayActive is now false, but we remember we should resume.
+        // Let's use a separate flag: 'autoplayEnabled' that represents user preference.
+        // We'll rename: let autoplayEnabled = true (overall setting). On hover we stop interval, on leave we restart if autoplayEnabled.
+        // But our start/stop modify isAutoplayActive incorrectly. Let's refactor quickly:
+      });
+
+      // To make hover/resume reliable, let's restructure autoplay control with a flag 'autoplayAllowed'.
+      // But for simplicity, we'll use a simpler pattern: mouseenter stops, mouseleave starts if allowed.
+      // We'll add a variable: let userAutoplay = true (global)
+      // Implementation:
+      let userAutoplay = true;   // user preference (could be toggled, but we set true)
+
+      // overwrite previous handlers with proper logic:
+      // Remove old listeners (we'll redefine)
+      // but we have already added inside IIFE. We'll replace with new ones using named listeners or just replace them.
+      // To avoid conflict, we'll remove and re-attach:
+
+      // Better: rewrite the whole autoplay part elegantly.
+
+      // ---------- clean approach ----------
+      // We'll clear any previous interval and set fresh.
+      // stopAutoplay, startAutoplay will rely on userAutoplay.
+      
+      function stopAutoplayByHover() {
+        if (autoplayInterval) {
+          clearInterval(autoplayInterval);
+          autoplayInterval = null;
+        }
+      }
+
+      function startAutoplayIfAllowed() {
+        if (userAutoplay && !autoplayInterval) {
+          autoplayInterval = setInterval(() => {
+            nextSlide();
+          }, AUTOPLAY_DELAY);
+        }
+      }
+
+      // sync hint based on interval existence + userAutoplay
+      function refreshHint() {
+        if (userAutoplay && autoplayInterval) {
+          autoplayHint.innerHTML = '⏵ autoplay · interval 3s';
+        } else if (!userAutoplay) {
+          autoplayHint.innerHTML = '⏸︎ autoplay off';
+        } else {
+          autoplayHint.innerHTML = '⏸︎ autoplay paused (hover)';
+        }
+      }
+
+      // modify goToSlide to call refreshHint? not necessary, but we will call it after start/stop
+      // override startAutoplay / stopAutoplay to use new logic.
+
+      // But we also need to reset on manual navigation: reset timer.
+      function resetAutoplayTimer() {
+        if (userAutoplay) {
+          if (autoplayInterval) {
+            clearInterval(autoplayInterval);
+            autoplayInterval = setInterval(() => {
+              nextSlide();
+            }, AUTOPLAY_DELAY);
+          }
+        }
+      }
+
+      // patch goToSlide to reset timer
+      const originalGoToSlide = goToSlide;
+      goToSlide = function(index) {
+        originalGoToSlide(index);
+        if (userAutoplay) {
+          // reset interval
+          if (autoplayInterval) {
+            clearInterval(autoplayInterval);
+            autoplayInterval = setInterval(() => {
+              nextSlide();
+            }, AUTOPLAY_DELAY);
+          } else {
+            // if interval not running but allowed, start it
+            startAutoplayIfAllowed();
+          }
+        }
+        refreshHint();
+      };
+
+      // Rebind next/prev to use updated goToSlide
+      nextBtn.addEventListener('click', () => {
+        nextSlide();
+        resetAutoplayTimer();   // ensures timer restarts
+        refreshHint();
+      });
+      
+      prevBtn.addEventListener('click', () => {
+        prevSlide();
+        resetAutoplayTimer();
+        refreshHint();
+      });
+
+      // hover: pause timer, but remember we should resume if allowed
+      slider.addEventListener('mouseenter', () => {
+        if (userAutoplay && autoplayInterval) {
+          clearInterval(autoplayInterval);
+          autoplayInterval = null;
+          refreshHint();
+        }
+      });
+
+      slider.addEventListener('mouseleave', () => {
+        if (userAutoplay && !autoplayInterval) {
+          autoplayInterval = setInterval(() => {
+            nextSlide();
+          }, AUTOPLAY_DELAY);
+          refreshHint();
+        }
+      });
+
+      // optional: double-click on slider toggles autoplay permanently (nice extra)
+      slider.addEventListener('dblclick', () => {
+        userAutoplay = !userAutoplay;
+        if (userAutoplay) {
+          // start if not running (and not hovering)
+          // but check if mouse is inside? we can just start if interval null
+          if (!autoplayInterval) {
+            autoplayInterval = setInterval(() => {
+              nextSlide();
+            }, AUTOPLAY_DELAY);
+          }
+        } else {
+          // turn off
+          if (autoplayInterval) {
+            clearInterval(autoplayInterval);
+            autoplayInterval = null;
+          }
+        }
+        refreshHint();
+      });
+
+      // initialize everything
+      createDots();
+      goToSlide(0);   // sets first image and dots
+      
+      // start autoplay by default
+      userAutoplay = true;
+      if (autoplayInterval) clearInterval(autoplayInterval);
+      autoplayInterval = setInterval(() => {
+        nextSlide();
+      }, AUTOPLAY_DELAY);
+      refreshHint();
+
+      // optional: when window resizes, the transform remains correct because % is based on container width.
+      // But if orientation changes, it's fine.
+
+      // ensure that dot creation handles any new images? not needed, static.
+
+      // additional: keyboard accessibility (left/right arrows)
+      window.addEventListener('keydown', (e) => {
+        // only if slider is in view (optional)
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevSlide();
+          resetAutoplayTimer();
+          refreshHint();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextSlide();
+          resetAutoplayTimer();
+          refreshHint();
+        }
+      });
+
+      // small fix: update hint after any navigation via original functions (already patched)
+      // also call refreshHint after autoplay toggle via dblclick.
+    })();
+  </script>
+
+  <!-- brief documentation (visible as footer) -->
+  <div style="position: fixed; bottom: 8px; left: 0; right: 0; text-align: center; font-size: 14px; color: #4a5568; background: rgba(255,255,255,0.7); padding: 6px; backdrop-filter: blur(5px); width: fit-content; margin: 0 auto; border-radius: 40px; border: 1px solid #ccc;">
+    ⚡ <strong>Slider docs</strong> — HTML: .slider > .slider-wrapper + buttons. CSS: flex + transition. JS: index transform. Autoplay (3s) pauses on hover. Double‑click slider to toggle autoplay.
+  </div>
+</body>
+</html>
